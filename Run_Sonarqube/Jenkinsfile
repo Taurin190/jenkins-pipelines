@@ -1,0 +1,22 @@
+node {
+   def commit_id
+   stage('Preparation') { // for display purposes
+      // Get some code from a GitHub repository
+      git 'https://github.com/Taurin190/blog-springboot.git'
+      sh "git rev-parse --short HEAD > .git/commit-id"
+      commit_id = readFile('.git/commit-id').trim()
+
+   }
+   stage('UnitTest') {
+       sh "./gradlew test"
+       sh "touch build/test-results/**/*.xml"
+       junit allowEmptyResults: true, testResults: 'build/test-results/**/TEST-*.xml'
+   }
+   stage('Run Sonarqube') {
+       sh "pwd; ls -la"
+       def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+       withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
+         sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://sonarqube:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=blog-springboot -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=src/main/ -Dsonar.tests=src/test/ -Dsonar.language=java -Dsonar.java.binaries=build/classes -Dsonar.junit.reportsPath=build/test-reports -Dsonar.java.coveragePlugin=jacoco -Dsonar.jacoco.reportPath=build/jacoco/test.exec"
+       }
+   }
+}

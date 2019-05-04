@@ -1,0 +1,20 @@
+node {
+   def commit_id
+   stage('Preparation') { // for display purposes
+      // Get some code from a GitHub repository
+      git 'https://github.com/Taurin190/blog-springboot.git'
+      sh "git rev-parse --short HEAD > .git/commit-id"
+      commit_id = readFile('.git/commit-id').trim()
+
+   }
+   stage('UnitTest') {
+       sh "./gradlew test"
+   }
+   stage('Build-Jar') {
+      sh "./gradlew build"
+   }
+   stage('Build-Docker') {
+      sh "cp ./build/libs/blog-springboot*.jar ./docker/app/blog-springboot.jar"
+      sh "cd docker/app/; docker build . -t blog-springboot"
+   }
+}

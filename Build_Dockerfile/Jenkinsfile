@@ -9,6 +9,8 @@ node {
    }
    stage('UnitTest') {
        sh "./gradlew test"
+       sh "touch build/test-results/**/*.xml"
+       junit allowEmptyResults: true, testResults: 'build/test-results/**/TEST-*.xml'
    }
    stage('Build-Jar') {
       sh "./gradlew build"

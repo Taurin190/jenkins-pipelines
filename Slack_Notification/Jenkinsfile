@@ -1,0 +1,31 @@
+node {
+   def commit_id
+   try {
+     stage('Preparation') { // for display purposes
+        // Get some code from a GitHub repository
+        git 'https://github.com/Taurin190/blog-springboot.git'
+        sh "git rev-parse --short HEAD > .git/commit-id"
+        commit_id = readFile('.git/commit-id').trim()
+     }
+     stage('UnitTest') {
+         sh "./gradlew test"
+         sh "touch build/test-results/**/*.xml"
+         junit allowEmptyResults: true, testResults: 'build/test-results/**/TEST-*.xml'
+         slackSend ( message: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' PASS UnitTest")
+     }
+     stage('Build-Jar') {
+        sh "./gradlew build"
+        slackSend ( message: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' PASS Build-Jar")
+     }
+     stage('Build-Docker') {
+        sh "cp ./build/libs/blog-springboot*.jar ./docker/app/blog-springboot.jar"
+        sh "cd docker/app/; docker build . -t blog-springboot"
+        slackSend ( message: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' PASS Build-Docker")
+     }
+   } catch(e) {
+       currentBuild.result = "FAILURE";
+       slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}] ${e}' (${env.BUILD_URL})")
+       
+       throw e
+   }
+}
